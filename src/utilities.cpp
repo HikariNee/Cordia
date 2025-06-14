@@ -88,6 +88,7 @@ auto writeAll(int fd, const std::string& str) -> void
 auto ensureStoreDirectory() -> void
 {
   if (!std::filesystem::exists(ROOTFS_PATH)) {
+    std::filesystem::create_directory(ROOTFS_PATH.parent_path());
     std::filesystem::create_directory(ROOTFS_PATH);
 
     // ideally this should be transferred to a

@@ -47,14 +47,14 @@ auto performPivot(std::filesystem::path newroot) -> void
 
   pivotRoot(".", ".");
 
-  // change to oldroot, as chdir(".") just switches you to /proc/self/cwd.
-  // switching the current directory to there does not override /proc/self/cwd to refer to /proc/self/cwd.
+  // change to oldroot, just for safety.
+  // switching the current directory to there does not make /proc/self/cwd refer to /proc/self/cwd.
   if (chdir(".") == -1) {
     panicOnError("chdir_oldrootfs");
   }
 
   // https://www.kernel.org/doc/Documentation/filesystems/sharedsubtree.txt lists the reason for this well enough.
-  // by making the oldroot a slave, it isn't propagated back to the host filesystem.
+  // by making the oldroot a slave, any changes to it are not propagated back to the host filesystem.
   if (mount("", ".", nullptr, MS_SLAVE | MS_REC, nullptr) == -1) {
     panicOnError("mount_rslave");
   }
