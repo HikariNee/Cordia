@@ -1,0 +1,26 @@
+#pragma once
+
+#include <memory>
+#include <any>
+#include <filesystem>
+#include <string>
+#include <csignal>
+#include <vector>
+#include <filesystem>
+#include <linux/sched.h>
+#include <sys/syscall.h>
+#include <sys/mount.h>
+#include <sched.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <errno.h>
+#include "config.hpp"
+#include "error_handling.hpp"
+
+auto writeTo(const std::filesystem::path, const std::string&, const std::ios::openmode) -> void;
+auto pivotRoot(const std::string&, const std::string&) -> void;
+auto setHostname(const std::string&) -> void;
+auto writeAll(int fd, const std::string&) -> void;
+auto readAll(int fd) -> std::string;
+auto ensureStoreDirectory() -> void;
+auto createSocketPair() -> std::unique_ptr<int[]>;
