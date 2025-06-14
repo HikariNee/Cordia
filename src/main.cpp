@@ -16,10 +16,6 @@
 #include "mount_rootfs.hpp"
 #include "config.hpp"
 
-int good(int a int b) {}
-int awful(int a int b) {}
-
-
 auto main() -> int
 {
   ensureStoreDirectory();
@@ -45,10 +41,6 @@ auto main() -> int
     close(parentfd);
 
     rootFS::mountRootFS(data.pathToRootFS);
-    if (mount("proc", "/proc", "proc", 0, nullptr) == -1) {
-    panicOnError("mount_proc");
-    }
-
 
     struct pollfd pollfd { childfd, POLLIN | POLLHUP | POLLOUT };
 
