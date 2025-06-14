@@ -6,10 +6,10 @@ set(CMAKE_COMPILE_WARNING_AS_ERROR ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 
-set(ROOTFS_PATH "/var/lib/coderunner/rootfs")
+set(ROOTFS_PATH "/var/lib/flai/rootfs")
 
-project(coderunner VERSION 0.1
-                         DESCRIPTION "isolated coderunner using linux namespaces"
+project(Flai VERSION 0.1
+                         DESCRIPTION "use linux namespaces to run arbitrary code."
                          LANGUAGES CXX)
 
 set(LIBS_CPP
