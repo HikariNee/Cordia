@@ -1,8 +1,8 @@
-* Flai
+* Cordia
 
-Flai is a program that uses linux namespaces to run arbitary code in any programming language.
+Cordia is a program that uses linux namespaces to run arbitary code in any programming language.
 
 It is currently a work in progress.
 
 ** LICENSE
-Flai is licensed under the GPLv2 license. For those wishing to seek details, one can find them in [[LICENSE]].
+Cordia is licensed under the GPLv2 license. For those wishing to seek details, one can find them in [[LICENSE]].
