@@ -6,59 +6,39 @@
 #include <string>
 #include <filesystem>
 #include <format>
+#include <thread>
+#include <chrono>
 #include <sys/mount.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <poll.h>
+#include <sys/epoll.h>
+#include <mqueue.h>
 #include <unistd.h>
+#include <sys/wait.h>
 #include "utilities.hpp"
 #include "container.hpp"
 #include "mount_rootfs.hpp"
 #include "config.hpp"
+#include "error_handling.cpp"
+#include "mq.hpp"
 
 auto main() -> int
 {
   ensureStoreDirectory();
 
-  std::unique_ptr<int[]> sv = createSocketPair();
-  int parentfd = sv[0];
-  int childfd = sv[1];
-  auto data = SData {parentfd, childfd , ROOTFS_PATH };
-  Container container = Container(std::move(data));
+  MsgQueue queue {"/msgqu"};
+  Container container {};
 
   // make sure /proc, /dev, and /sys are created properly.
   rootFS::preMountRootFS(ROOTFS_PATH);
 
-  // this being a valid expressions kills me inside.
-  sv.get_deleter()(sv.release());
-
-  container.initializeContainerWith(+[](void* fd) -> int {
-
-    SData& data = *reinterpret_cast<SData*>(fd);
-    int parentfd = data.parentfd;
-    int childfd = data.childfd;
+  container.initializeContainerWith(+[](void* data) -> int {
+    MsgQueue queue { "/msgqu" };
     pid_t pid = getpid();
-    close(parentfd);
 
-    rootFS::mountRootFS(data.pathToRootFS);
-
-    struct pollfd pollfd { childfd, POLLIN | POLLHUP | POLLOUT };
-
-
-    while (poll(&pollfd, 1, 10 * 1000) > 0) {
-      if (pollfd.revents & POLLHUP) {
-        break;
-      }
-
-      if (pollfd.revents & POLLERR) {
-        break;
-      }
-
-      if (pollfd.revents & POLLIN) {
-        auto buf = readAll(childfd);
-        execlp(buf.c_str(), buf.c_str(), nullptr);
-      }
-    }
+    rootFS::mountRootFS(ROOTFS_PATH);
+    queue.send(MessageType::ROOTFS_READY, 32767); // On Linux, sysconf(_SC_MQ_PRIO_MAX) returns 32768.
+    execlp("/bin/sh", "/bin/sh", nullptr);
 
     std::cout << "killed.\n";
     std::exit(0);
@@ -66,33 +46,12 @@ auto main() -> int
 
   bool sentComm = 0;
 
-  close(childfd);
+  MessageType msg = static_cast<MessageType>(std::stoi(queue.recv()));
 
-  struct pollfd pollfd { parentfd, POLLIN | POLLHUP | POLLOUT };
-
-  while (poll(&pollfd, 1, 10 * 1000) > 0) {
-    if (pollfd.revents & POLLHUP) {
-      break;
-    }
-
-    if (pollfd.revents & POLLERR) {
-      break;
-    }
-
-    if (pollfd.revents & POLLOUT) {
-      if (!sentComm) {
-        container.setupMaps(std::format("1000 {} 1", std::to_string(getuid())), std::format("1000 {} 1", std::to_string(geteuid())));
-        std::cout << getuid() << '\n';
-        writeAll(parentfd, "/bin/sh");
-        sentComm = 1;
-      }
-    }
-
-    if (pollfd.revents & POLLIN) {
-      auto buf = readAll(parentfd);
-      std::cout << buf << '\n';
-    }
+  if (msg == MessageType::ROOTFS_READY) {
+    container.setupMaps("0 0 1", "0 0 1");
   }
 
+  waitpid(container.getChildPID(), nullptr, 0);
   return 0;
 }

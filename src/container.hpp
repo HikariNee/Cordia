@@ -9,7 +9,7 @@
 
 class Container {
 public:
-  Container(SData&&);
+  Container() = default;
 
   // guess why I defined this again...
   template<typename F>
@@ -24,7 +24,6 @@ public:
   ~Container();
 
 private:
-  SData data;
   int cpid;
 
   template<typename T>
