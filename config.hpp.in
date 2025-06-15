@@ -3,3 +3,7 @@
 #include <filesystem>
 
 const std::filesystem::path ROOTFS_PATH = "@ROOTFS_PATH@";
+
+enum class MessageType : unsigned {
+  ROOTFS_READY = 0,
+};
