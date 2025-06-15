@@ -6,9 +6,9 @@ set(CMAKE_COMPILE_WARNING_AS_ERROR ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 
-set(ROOTFS_PATH "/var/lib/flai/rootfs")
+set(ROOTFS_PATH "/var/lib/cordia/rootfs")
 
-project(Flai VERSION 0.1
+project(Cordia VERSION 0.1
                          DESCRIPTION "use linux namespaces to run arbitrary code."
                          LANGUAGES CXX)
 
@@ -17,6 +17,7 @@ set(LIBS_CPP
         "src/utilities.cpp"
         "src/container.cpp"
         "src/mount_rootfs.cpp"
+        "src/mq.cpp"
 )
 
 set(LIBS_HPP
@@ -24,6 +25,7 @@ set(LIBS_HPP
         "src/utilities.hpp"
         "src/container.hpp"
         "src/mount_rootfs.hpp"
+        "src/mq.hpp"
 )
 
 configure_file (config.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/src/config.hpp @ONLY)
