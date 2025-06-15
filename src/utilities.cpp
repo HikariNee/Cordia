@@ -108,3 +108,9 @@ auto createSocketPair() -> std::unique_ptr<int[]>
 
   return sv;
 }
+
+
+auto messageTypeToString(MessageType msg) -> std::string
+{
+  return std::to_string(static_cast<unsigned>(msg));
+}

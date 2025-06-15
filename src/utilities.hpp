@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <errno.h>
+#include <mqueue.h>
 #include "config.hpp"
 #include "error_handling.hpp"
 
@@ -24,3 +25,4 @@ auto writeAll(int fd, const std::string&) -> void;
 auto readAll(int fd) -> std::string;
 auto ensureStoreDirectory() -> void;
 auto createSocketPair() -> std::unique_ptr<int[]>;
+auto messageTypeToString(MessageType) -> std::string;
