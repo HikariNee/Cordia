@@ -5,12 +5,7 @@
 #include <string>
 #include <vector>
 #include <sched.h>
-
-struct SData {
-  int parentfd;
-  int childfd;
-  std::filesystem::path pathToRootFS;
-};
+#include "mq.hpp"
 
 class Container {
 public:
@@ -20,7 +15,7 @@ public:
   template<typename F>
   auto initializeContainerWith(F func) -> void
   {
-    int cpid = createNamespace(func, static_cast<void*>(&data));
+    int cpid = createNamespace(func, nullptr);
     this->cpid = cpid;
   }
 
