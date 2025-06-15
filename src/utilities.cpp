@@ -98,18 +98,6 @@ auto ensureStoreDirectory() -> void
 }
 
 
-auto createSocketPair() -> std::unique_ptr<int[]>
-{
-  std::unique_ptr<int[]> sv = std::make_unique<int[]>(2);
-
-  if (socketpair(AF_UNIX, SOCK_STREAM, 0, sv.get()) != 0) {
-    panicOnError("socketpair");
-  }
-
-  return sv;
-}
-
-
 auto messageTypeToString(MessageType msg) -> std::string
 {
   return std::to_string(static_cast<unsigned>(msg));

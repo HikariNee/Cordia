@@ -24,5 +24,4 @@ auto setHostname(const std::string&) -> void;
 auto writeAll(int fd, const std::string&) -> void;
 auto readAll(int fd) -> std::string;
 auto ensureStoreDirectory() -> void;
-auto createSocketPair() -> std::unique_ptr<int[]>;
 auto messageTypeToString(MessageType) -> std::string;
