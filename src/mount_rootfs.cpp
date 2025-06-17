@@ -1,31 +1,93 @@
 #include <sys/mount.h>
 #include <sys/stat.h>
+#include <sys/sysmacros.h>
+#include <utility>
+#include <iostream>
 #include "utilities.hpp"
 #include "mount_rootfs.hpp"
 #include "config.hpp"
 
-auto rootFS::preMountRootFS(std::filesystem::path root) -> void
+//dev is treated specially, the OCI spec says that we mustn't mount everything and only mount what is necessary.
+// https://github.com/opencontainers/runc/blob/b04031d708de1ad55df6b7536004500f8e5c3d67/libcontainer/SPEC.md?plain=1#L67
+auto createDevDirs(const std::filesystem::path& devpath) -> void
 {
-  // The sole purpose of the function is to setup the "special" directories inside the new root.
-  if (mount("proc", (root / "proc").c_str(), "proc", 0, nullptr) == -1) {
+  if (mount("dev", devpath.c_str(), "tmpfs", MS_NOEXEC | MS_STRICTATIME, "mode=755") == -1) {
+    panicOnError("mount_newrootfs_dev");
+  }
+
+  std::filesystem::create_directory(devpath / "pts");
+  std::filesystem::create_directory(devpath / "mqueue");
+  std::filesystem::create_directory(devpath / "shm");
+
+
+  if (mount("devpts", (devpath / "pts").c_str(), "devpts", MS_NOEXEC | MS_NOSUID, "mode=620,ptmxmode=0666") == -1) {
+    panicOnError("mount_newrootfs_devpts");
+  }
+
+  if (mount(nullptr, (devpath / "mqueue").c_str(), "mqueue", MS_NOEXEC | MS_NOSUID | MS_NODEV, nullptr) == -1) {
+    panicOnError("mount_newrootfs_devmqueue");
+  }
+
+  if (mount(nullptr, (devpath / "shm").c_str(), "tmpfs", MS_NOEXEC | MS_NOSUID | MS_NODEV, "mode=1777,size=65536k") == -1) {
+    panicOnError("mount_newrootfs_devshm");
+  }
+}
+
+
+auto setupPTMX() -> void
+{
+  if (symlink("/dev/pts/ptmx", "/dev/ptmx") == -1) {
+    panicOnError("symlink_dev_ptmx");
+  }
+}
+
+
+auto createBasicDevNodes(const std::filesystem::path& dev) -> void
+{
+  // (file, major, minor)
+  // https://www.kernel.org/doc/html/latest/admin-guide/devices.html
+  std::array<std::tuple<std::string, unsigned, unsigned>, 6> devfiles {
+    std::make_tuple("null", 1, 3),
+    std::make_tuple("zero", 1, 5),
+    std::make_tuple("full", 1, 7),
+    std::make_tuple("random", 1, 8),
+    std::make_tuple("urandom", 1, 9),
+    std::make_tuple("tty", 5, 0),
+  };
+
+  for (const auto [file, major, minor] : devfiles) {
+    dev_t device = makedev(major, minor);
+
+    if (mknod((dev / file).c_str(), S_IFCHR | 0666, device) == -1) {
+      panicOnError(("/dev/" + file).c_str());
+    }
+  };
+}
+
+
+auto rootFS::preMountRootFS(const std::filesystem::path& root) -> void
+{
+  const std::filesystem::path devpath = root / "dev";
+
+  // the mount options follow what the OCI spec says.
+  if (mount("proc", (root / "proc").c_str(), "proc", MS_NOEXEC | MS_NOSUID | MS_NODEV, nullptr) == -1) {
     panicOnError("mount_newrootfs_proc");
   }
 
-  if (mount("dev", (root / "dev").c_str(), "devtmpfs", 0, nullptr) == -1) {
-      panicOnError("mount_newrootfs_devtmpfs");
-  }
-
-  if (mount("sys", (root / "sys").c_str(), "sysfs", 0, nullptr) == -1) {
+  if (mount("sys", (root / "sys").c_str(), "sysfs", MS_NOEXEC | MS_NOSUID | MS_NODEV | MS_RDONLY, nullptr) == -1) {
     panicOnError("mount_newrootfs_sysfs");
   }
 
   if (mount("tmp", (root / "tmp").c_str(), "tmpfs", 0, nullptr) == -1) {
     panicOnError("mount_newrootfs_tmp");
   }
+
+  createDevDirs(devpath);
+  createBasicDevNodes(devpath);
 }
 
 
-auto performPivot(std::filesystem::path newroot) -> void
+auto performPivot(const std::filesystem::path& newroot) -> void
 {
   // https://github.com/opencontainers/runc/blob/b04031d708de1ad55df6b7536004500f8e5c3d67/libcontainer/rootfs_linux.go#L1077
 
@@ -70,7 +132,12 @@ auto performPivot(std::filesystem::path newroot) -> void
   }
 }
 
-auto rootFS::mountRootFS(std::filesystem::path newroot) -> void
+auto rootFS::mountRootFS(const std::filesystem::path& newroot) -> void
 {
   performPivot(newroot);
+  setupPTMX();
+
+  if (mount("/", "/", nullptr, MS_REMOUNT | MS_PRIVATE | MS_BIND | MS_RDONLY, nullptr) == -1) {
+    panicOnError("remount_rootfs_ro");
+  }
 }
