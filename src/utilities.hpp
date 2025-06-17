@@ -18,10 +18,8 @@
 #include "config.hpp"
 #include "error_handling.hpp"
 
-auto writeTo(const std::filesystem::path, const std::string&, const std::ios::openmode) -> void;
+auto writeTo(const std::filesystem::path&, const std::string&, const std::ios::openmode) -> void;
 auto pivotRoot(const std::string&, const std::string&) -> void;
 auto setHostname(const std::string&) -> void;
-auto writeAll(int fd, const std::string&) -> void;
-auto readAll(int fd) -> std::string;
 auto ensureStoreDirectory() -> void;
 auto messageTypeToString(MessageType) -> std::string;

@@ -10,6 +10,7 @@
 #include <sched.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <pwd.h>
 #include "utilities.hpp"
 #include "config.hpp"
 
@@ -23,7 +24,7 @@ auto pivotRoot(const std::string& newroot, const std::string& oldroot) -> void
 }
 
 
-auto writeTo(std::filesystem::path path, const std::string& line, std::ios::openmode mode) -> void
+auto writeTo(const std::filesystem::path& path, const std::string& line, std::ios::openmode mode) -> void
 {
   std::ofstream file(path, mode);
 
@@ -40,47 +41,6 @@ auto setHostname(const std::string& name) -> void
   int ret = sethostname(name.c_str(), name.size());
   if (ret == -1) {
     panicOnError("sethostname");
-  }
-}
-
-
-auto readAll(int fd) -> std::string
-{
-  unsigned length = 0;
-
-  if (read(fd, &length, sizeof(length)) != sizeof(length)) {
-    panicOnError("read_len");
-  }
-
-  length = ntohl(length);
-  std::vector<char> buf(length);
-  unsigned total = 0;
-
-  while (total < length) {
-    ssize_t ret = read(fd, buf.data() + total, length - total);
-    if (ret <= 0) panicOnError("read_data");
-    total += ret;
-  }
-
-  return std::string{buf.begin(), buf.end()};
-}
-
-
-auto writeAll(int fd, const std::string& str) -> void
-{
-  unsigned total = 0;
-  unsigned len = str.size();
-  unsigned length = htonl(str.size());
-  const char* data = str.data();
-
-  if (write(fd, reinterpret_cast<char*>(&length), sizeof(length)) != sizeof(length)) {
-    panicOnError("write_len");
-  }
-
-  while (total < len) {
-    ssize_t n = write(fd, data + total, len - total);
-    if (n <= 0) panicOnError("write_data");
-    total += n;
   }
 }
 

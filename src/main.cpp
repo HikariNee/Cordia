@@ -44,8 +44,6 @@ auto main() -> int
     std::exit(0);
   });
 
-  bool sentComm = 0;
-
   MessageType msg = static_cast<MessageType>(std::stoi(queue.recv()));
 
   if (msg == MessageType::ROOTFS_READY) {
