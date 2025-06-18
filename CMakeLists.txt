@@ -2,9 +2,9 @@ cmake_minimum_required(VERSION 3.15...4.0)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_EXTENSIONS OFF)
+add_compile_options(-Wall -Wextra)
 set(CMAKE_COMPILE_WARNING_AS_ERROR ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
 
 set(ROOTFS_PATH "/var/lib/cordia/rootfs")
 
