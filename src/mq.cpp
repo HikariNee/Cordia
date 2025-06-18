@@ -36,7 +36,7 @@ auto MsgQueue::send(const std::string& buf, unsigned prio) -> void
 
 auto MsgQueue::recv() -> std::string
 {
-  char msg_ptr[mq_msgsize] {};
+  char msg_ptr[this->mq_msgsize] {};
   int res = mq_receive(queue, msg_ptr, mq_msgsize, NULL);
   if (res == -1)
     panicOnError("mq_recv");

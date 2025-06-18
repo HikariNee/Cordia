@@ -9,16 +9,19 @@
 
 //dev is treated specially, the OCI spec says that we mustn't mount everything and only mount what is necessary.
 // https://github.com/opencontainers/runc/blob/b04031d708de1ad55df6b7536004500f8e5c3d67/libcontainer/SPEC.md?plain=1#L67
-auto createDevDirs(const std::filesystem::path& devpath) -> void
+auto createDevDirs(const std::filesystem::path& root) -> void
 {
-  if (mount("dev", devpath.c_str(), "tmpfs", MS_NOEXEC | MS_STRICTATIME, "mode=755") == -1) {
-    panicOnError("mount_newrootfs_dev");
-  }
+  const std::filesystem::path devpath = root / "dev";
 
   std::filesystem::create_directory(devpath / "pts");
   std::filesystem::create_directory(devpath / "mqueue");
   std::filesystem::create_directory(devpath / "shm");
+}
 
+
+auto mountDevDirs(const std::filesystem::path& root) -> void
+{
+  const std::filesystem::path devpath = root / "dev";
 
   if (mount("devpts", (devpath / "pts").c_str(), "devpts", MS_NOEXEC | MS_NOSUID, "mode=620,ptmxmode=0666") == -1) {
     panicOnError("mount_newrootfs_devpts");
@@ -34,16 +37,9 @@ auto createDevDirs(const std::filesystem::path& devpath) -> void
 }
 
 
-auto setupPTMX() -> void
+auto createBasicDevNodes(const std::filesystem::path& root) -> void
 {
-  if (symlink("/dev/pts/ptmx", "/dev/ptmx") == -1) {
-    panicOnError("symlink_dev_ptmx");
-  }
-}
-
-
-auto createBasicDevNodes(const std::filesystem::path& dev) -> void
-{
+  const std::filesystem::path dev = root / "dev";
   // (file, major, minor)
   // https://www.kernel.org/doc/html/latest/admin-guide/devices.html
   std::array<std::tuple<std::string, unsigned, unsigned>, 6> devfiles {
@@ -55,13 +51,41 @@ auto createBasicDevNodes(const std::filesystem::path& dev) -> void
     std::make_tuple("tty", 5, 0),
   };
 
-  for (const auto [file, major, minor] : devfiles) {
+  for (const auto& [file, major, minor] : devfiles) {
     dev_t device = makedev(major, minor);
 
     if (mknod((dev / file).c_str(), S_IFCHR | 0666, device) == -1) {
       panicOnError(("/dev/" + file).c_str());
     }
   };
+}
+
+
+auto setupPTMX() -> void
+{
+  if (symlink("/dev/pts/ptmx", "/dev/ptmx") == -1) {
+    panicOnError("symlink_dev_ptmx");
+  }
+}
+
+
+auto setupStdFds() -> void
+{
+  const std::string procself = "/proc/self/fd";
+  const std::string dev = "/dev";
+
+  std::array<std::pair<std::string, std::string>, 4> procFdsToDev {
+    std::make_pair(procself, dev + "/fd"),
+    std::make_pair(procself + "/0" , dev + "/stdin"),
+    std::make_pair(procself + "/1" , dev + "/stdout"),
+    std::make_pair(procself + "/2" , dev + "/stderr"),
+  };
+
+  for (const auto& [proc, devfd] : procFdsToDev) {
+    if (symlink(proc.c_str(), devfd.c_str()) == -1) {
+      panicOnError("symlink_proc_fd");
+    }
+  }
 }
 
 
@@ -82,8 +106,14 @@ auto rootFS::preMountRootFS(const std::filesystem::path& root) -> void
     panicOnError("mount_newrootfs_tmp");
   }
 
-  createDevDirs(devpath);
-  createBasicDevNodes(devpath);
+  if (mount("dev", (root / "dev").c_str(), "tmpfs", MS_NOEXEC | MS_STRICTATIME, "mode=755") == -1) {
+    panicOnError("mount_newrootfs_dev");
+  }
+
+
+  createDevDirs(root);
+  mountDevDirs(root);
+  createBasicDevNodes(root);
 }
 
 
@@ -136,6 +166,7 @@ auto rootFS::mountRootFS(const std::filesystem::path& newroot) -> void
 {
   performPivot(newroot);
   setupPTMX();
+  setupStdFds();
 
   if (mount("/", "/", nullptr, MS_REMOUNT | MS_PRIVATE | MS_BIND | MS_RDONLY, nullptr) == -1) {
     panicOnError("remount_rootfs_ro");
